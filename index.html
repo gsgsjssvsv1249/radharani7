@@ -216,6 +216,11 @@
     }
 
     playPauseBtn.onclick = () => {
+      if (!audio.src) {
+        alert("Please upload an audio file first.");
+        return;
+      }
+
       if (audio.paused) {
         audio.play();
         playPauseBtn.textContent = '⏸️';
@@ -258,14 +263,15 @@
         audio.load();
         playPauseBtn.textContent = '▶️';
 
-        if (source) source.disconnect();
-        source = audioCtx.createMediaElementSource(audio);
-        source.connect(analyser);
-        analyser.connect(audioCtx.destination);
+        if (!source) {
+          source = audioCtx.createMediaElementSource(audio);
+          source.connect(analyser);
+          analyser.connect(audioCtx.destination);
+        }
       }
     };
 
-    function drawWaveform() {
+          function drawWaveform() {
       requestAnimationFrame(drawWaveform);
       analyser.getByteTimeDomainData(dataArray);
 
@@ -275,4 +281,42 @@
       ctx.lineCap = 'round';
 
       const sensitivity = parseInt(sensitivitySlider.value);
-      const centerY = canvas.height / dpr / 2
+      const centerY = canvas.height / dpr / 2;
+      const scale = canvas.height / dpr / sensitivity;
+      const xStep = canvas.width / dpr / bufferLength;
+
+      const step = 4;
+      let x = 0;
+      let y = (dataArray[0] - 128) * scale + centerY;
+      y = Math.max(0, Math.min(canvas.height / dpr, y));
+      ctx.moveTo(x, y);
+
+      for (let i = step; i < bufferLength - step; i += step) {
+        const prevX = x;
+        const prevY = y;
+
+        x = i * xStep;
+        y = (dataArray[i] - 128) * scale + centerY;
+        y = Math.max(0, Math.min(canvas.height / dpr, y));
+
+        const midX = (prevX + x) / 2;
+        const midY = (prevY + y) / 2;
+
+        ctx.quadraticCurveTo(prevX, prevY, midX, midY);
+      }
+
+      const gradient = ctx.createLinearGradient(0, 0, canvas.width / dpr, 0);
+      gradient.addColorStop(0, '#a020f0');
+      gradient.addColorStop(1, '#00bfff');
+      ctx.strokeStyle = gradient;
+      ctx.lineWidth = 2;
+      ctx.shadowColor = '#a020f0';
+      ctx.shadowBlur = 8;
+      ctx.stroke();
+    }
+
+    drawWaveform();
+    setInterval(updateTimestamp, 500);
+  </script>
+</body>
+</html>
