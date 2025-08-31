@@ -263,15 +263,12 @@
         audio.load();
         playPauseBtn.textContent = '▶️';
 
-        if (!source) {
-          source = audioCtx.createMediaElementSource(audio);
-          source.connect(analyser);
-          analyser.connect(audioCtx.destination);
-        }
+        source = audioCtx.createMediaElementSource(audio);
+        source.connect(analyser);
+        analyser.connect(audioCtx.destination);
       }
     };
-
-          function drawWaveform() {
+    function drawWaveform() {
       requestAnimationFrame(drawWaveform);
       analyser.getByteTimeDomainData(dataArray);
 
