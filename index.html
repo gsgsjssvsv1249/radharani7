@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>SoundScope - Smooth Audio Visualizer</title>
+  <title>SoundScope - Pixel Perfect</title>
   <style>
     body {
       margin: 0;
@@ -19,6 +19,7 @@
       height: 200px;
       background: black;
       border-bottom: 1px solid #333;
+      display: block;
     }
 
     .controls {
@@ -34,11 +35,6 @@
       padding: 20px;
       border-radius: 10px;
       width: 300px;
-    }
-
-    .panel h3 {
-      margin-top: 0;
-      color: #aaa;
     }
 
     label {
@@ -80,8 +76,6 @@
 
   <div class="controls">
     <div class="panel">
-      <h3>Visualizer Settings</h3>
-
       <label for="upload">Upload Audio</label>
       <input type="file" id="upload" accept="audio/*">
 
@@ -119,8 +113,18 @@
   <script>
     const canvas = document.getElementById('waveform');
     const ctx = canvas.getContext('2d');
-    canvas.width = window.innerWidth;
-    canvas.height = 200;
+    const dpr = window.devicePixelRatio || 1;
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth * dpr;
+      canvas.height = 200 * dpr;
+      canvas.style.width = window.innerWidth + 'px';
+      canvas.style.height = '200px';
+      ctx.scale(dpr, dpr);
+    }
+
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
 
     const audio = document.getElementById('audio');
     const playPauseBtn = document.getElementById('playPause');
@@ -217,21 +221,21 @@
       ctx.lineCap = 'round';
 
       const sensitivity = parseInt(sensitivitySlider.value);
-      const centerY = canvas.height / 2;
-      const scale = canvas.height / sensitivity;
-      const xStep = canvas.width / bufferLength;
+      const centerY = canvas.height / dpr / 2;
+      const scale = canvas.height / dpr / sensitivity;
+      const xStep = canvas.width / dpr / bufferLength;
 
-      const firstY = Math.max(0, Math.min(canvas.height, (dataArray[0] - 128) * scale + centerY));
+      const firstY = Math.max(0, Math.min(canvas.height / dpr, (dataArray[0] - 128) * scale + centerY));
       ctx.moveTo(0, firstY);
 
       for (let i = 1; i < bufferLength; i++) {
         const x = i * xStep;
         const rawY = (dataArray[i] - 128) * scale + centerY;
-        const y = Math.max(0, Math.min(canvas.height, rawY));
+        const y = Math.max(0, Math.min(canvas.height / dpr, rawY));
         ctx.lineTo(x, y);
       }
 
-      const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
+      const gradient = ctx.createLinearGradient(0, 0, canvas.width / dpr, 0);
       gradient.addColorStop(0, '#a020f0');
       gradient.addColorStop(1, '#00bfff');
       ctx.strokeStyle = gradient;
