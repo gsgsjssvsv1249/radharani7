@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>SoundScope - Advanced Audio Visualizer</title>
+  <style>
+    body {
+      margin: 0;
+      background: #0a0a0a;
+      font-family: 'Segoe UI', sans-serif;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    canvas {
+      width: 100%;
+      height: 200px;
+      background: black;
+      border-bottom: 1px solid #333;
+    }
+
+    .controls {
+      display: flex;
+      gap: 20px;
+      margin: 20px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .panel {
+      background: #1a1a1a;
+      padding: 20px;
+      border-radius: 10px;
+      width: 300px;
+    }
+
+    .panel h3 {
+      margin-top: 0;
+      color: #aaa;
+    }
+
+    label {
+      display: block;
+      margin: 10px 0 5px;
+    }
+
+    select, input[type="range"], button, input[type="file"] {
+      width: 100%;
+      padding: 5px;
+      background: #222;
+      color: white;
+      border: none;
+      border-radius: 5px;
+    }
+
+    button {
+      margin-top: 10px;
+      background: #3a3aff;
+      cursor: pointer;
+    }
+
+    .player {
+      background: #1a1a1a;
+      padding: 20px;
+      border-radius: 10px;
+      width: 300px;
+      text-align: center;
+    }
+
+    .player button {
+      font-size: 24px;
+      background: #6a00ff;
+    }
+
+    .progress, .volume {
+      margin-top: 10px;
+    }
+
+    .progress input, .volume input {
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="waveform"></canvas>
+
+  <div class="controls">
+    <div class="panel">
+      <h3>Visualization Controls</h3>
+
+      <label for="upload">Upload Music File</label>
+      <input type="file" id="upload" accept="audio/*">
+
+      <label for="mode">Visualization Mode</label>
+      <select id="mode">
+        <option value="waveform">Waveform</option>
+      </select>
+
+      <label for="sensitivity">Sensitivity</label>
+      <input type="range" id="sensitivity" min="1" max="100" value="50">
+
+      <label for="fftSize">FFT Size</label>
+      <select id="fftSize">
+        <option value="512">512</option>
+        <option value="1024">1024</option>
+        <option value="2048" selected>2048</option>
+      </select>
+
+      <label for="smoothing">Smoothing</label>
+      <input type="range" id="smoothing" min="0" max="1" step="0.01" value="0">
+
+      <button id="snapshot">Download Snapshot</button>
+    </div>
+
+    <div class="player">
+      <button id="playPause">▶️</button>
+      <div id="timestamp">00:00 / 01:00</div>
+      <div class="progress">
+        <input type="range" id="progress" min="0" max="100" value="0">
+      </div>
+      <div class="volume">
+        <input type="range" id="volume" min="0" max="1" step="0.01" value="0.5">
+      </div>
+    </div>
+  </div>
+
+  <audio id="audio" src="" controls hidden></audio>
+
+  <script>
+    const canvas = document.getElementById('waveform');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = 200;
+
+    const audio = document.getElementById('audio');
+    const playPauseBtn = document.getElementById('playPause');
+    const progressBar = document.getElementById('progress');
+    const volumeSlider = document.getElementById('volume');
+    const timestamp = document.getElementById('timestamp');
+    const uploadInput = document.getElementById('upload');
+
+    const fftSizeSelect = document.getElementById('fftSize');
+    const smoothingSlider = document.getElementById('smoothing');
+    const sensitivitySlider = document.getElementById('sensitivity');
+    const snapshotBtn = document.getElementById('snapshot');
+
+    let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    let analyser = audioCtx.createAnalyser();
+    let source = audioCtx.createMediaElementSource(audio);
+    source.connect(analyser);
+    analyser.connect(audioCtx.destination);
+
+    function formatTime(seconds) {
+      const m = Math.floor(seconds / 60);
+      const s = Math.floor(seconds % 60);
+      return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    }
+
+    function updateTimestamp() {
+      timestamp.textContent = `${formatTime(audio.currentTime)} / ${formatTime(audio.duration || 60)}`;
+      progressBar.value = (audio.currentTime / audio.duration) * 100 || 0;
+    }
+
+    playPauseBtn.onclick = () => {
+      if (audio.paused) {
+        audio.play();
+        playPauseBtn.textContent = '⏸️';
+      } else {
+        audio.pause();
+        playPauseBtn.textContent = '▶️';
+      }
+    };
+
+    progressBar.oninput = () => {
+      audio.currentTime = (progressBar.value / 100) * audio.duration;
+    };
+
+    volumeSlider.oninput = () => {
+      audio.volume = volumeSlider.value;
+    };
+
+    snapshotBtn.onclick = () => {
+      const link = document.createElement('a');
+      link.download = 'waveform.png';
+      link.href = canvas.toDataURL();
+      link.click();
+    };
+
+    fftSizeSelect.onchange = () => {
+      analyser.fftSize = parseInt(fftSizeSelect.value);
+    };
+
+    smoothingSlider.oninput = () => {
+      analyser.smoothingTimeConstant = parseFloat(smoothingSlider.value);
+    };
+
+    uploadInput.onchange = function () {
+      const file = uploadInput.files[0];
+      if (file) {
+        const fileURL = URL.createObjectURL(file);
+        audio.src = fileURL;
+        audio.load();
+        playPauseBtn.textContent = '▶️';
+      }
+    };
+
+    function drawWaveform() {
+      requestAnimationFrame(drawWaveform);
+      const bufferLength = analyser.fftSize;
+      const dataArray = new Uint8Array(bufferLength);
+      analyser.getByteTimeDomainData(dataArray);
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.beginPath();
+      const sensitivity = parseInt(sensitivitySlider.value);
+      for (let i = 0; i < bufferLength; i++) {
+        const x = (i / bufferLength) * canvas.width;
+        const y = (dataArray[i] / 255) * canvas.height;
+        ctx.lineTo(x, y);
+      }
+
+      const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
+      gradient.addColorStop(0, '#a020f0');
+      gradient.addColorStop(1, '#00bfff');
+      ctx.strokeStyle = gradient;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    drawWaveform();
+    setInterval(updateTimestamp, 500);
+  </script>
+</body>
+</html>
