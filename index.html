@@ -33,7 +33,7 @@
 
     canvas {
       width: 100%;
-      height: 200px;
+      height: 300px;
       background: black;
       display: block;
     }
@@ -171,9 +171,9 @@
 
     function resizeCanvas() {
       canvas.width = window.innerWidth * dpr;
-      canvas.height = 200 * dpr;
+      canvas.height = 300 * dpr;
       canvas.style.width = window.innerWidth + 'px';
-      canvas.style.height = '200px';
+      canvas.style.height = '300px';
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
 
@@ -282,7 +282,7 @@
       const scale = canvas.height / dpr / sensitivity;
       const xStep = canvas.width / dpr / bufferLength;
 
-      const step = 4;
+      const step = 2;
       let x = 0;
       let y = (dataArray[0] - 128) * scale + centerY;
       y = Math.max(0, Math.min(canvas.height / dpr, y));
