@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>SoundScope - Audio Visualizer</title>
+  <title>SoundScope - Smooth Audio Visualizer</title>
   <style>
     body {
       margin: 0;
@@ -93,6 +93,7 @@
         <option value="512">512</option>
         <option value="1024">1024</option>
         <option value="2048" selected>2048</option>
+        <option value="4096">4096</option>
       </select>
 
       <label for="smoothing">Smoothing</label>
@@ -212,17 +213,21 @@
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.beginPath();
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
 
       const sensitivity = parseInt(sensitivitySlider.value);
       const centerY = canvas.height / 2;
       const scale = canvas.height / sensitivity;
       const xStep = canvas.width / bufferLength;
 
-      ctx.moveTo(0, (dataArray[0] - 128) * scale + centerY);
+      const firstY = Math.max(0, Math.min(canvas.height, (dataArray[0] - 128) * scale + centerY));
+      ctx.moveTo(0, firstY);
 
       for (let i = 1; i < bufferLength; i++) {
         const x = i * xStep;
-        const y = (dataArray[i] - 128) * scale + centerY;
+        const rawY = (dataArray[i] - 128) * scale + centerY;
+        const y = Math.max(0, Math.min(canvas.height, rawY));
         ctx.lineTo(x, y);
       }
 
