@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>SoundScope - Pixel Perfect</title>
+  <title>SoundScope – Ultra Smooth</title>
   <style>
     body {
       margin: 0;
@@ -120,7 +120,7 @@
       canvas.height = 200 * dpr;
       canvas.style.width = window.innerWidth + 'px';
       canvas.style.height = '200px';
-      ctx.scale(dpr, dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
 
     resizeCanvas();
@@ -225,14 +225,24 @@
       const scale = canvas.height / dpr / sensitivity;
       const xStep = canvas.width / dpr / bufferLength;
 
-      const firstY = Math.max(0, Math.min(canvas.height / dpr, (dataArray[0] - 128) * scale + centerY));
-      ctx.moveTo(0, firstY);
+      const step = 4;
+      let x = 0;
+      let y = (dataArray[0] - 128) * scale + centerY;
+      y = Math.max(0, Math.min(canvas.height / dpr, y));
+      ctx.moveTo(x, y);
 
-      for (let i = 1; i < bufferLength; i++) {
-        const x = i * xStep;
-        const rawY = (dataArray[i] - 128) * scale + centerY;
-        const y = Math.max(0, Math.min(canvas.height / dpr, rawY));
-        ctx.lineTo(x, y);
+      for (let i = step; i < bufferLength - step; i += step) {
+        const prevX = x;
+        const prevY = y;
+
+        x = i * xStep;
+        y = (dataArray[i] - 128) * scale + centerY;
+        y = Math.max(0, Math.min(canvas.height / dpr, y));
+
+        const midX = (prevX + x) / 2;
+        const midY = (prevY + y) / 2;
+
+        ctx.quadraticCurveTo(prevX, prevY, midX, midY);
       }
 
       const gradient = ctx.createLinearGradient(0, 0, canvas.width / dpr, 0);
